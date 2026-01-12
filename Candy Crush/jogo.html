@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doce Aventura - Em Jogo</title>
+    <style>
+        :root {
+            --rosa-claro: #ffdee9;
+            --rosa-medio: #ffafbd;
+            --rosa-forte: #ff4081;
+            --branco-transparente: rgba(255, 255, 255, 0.7);
+            --shadow-doce: 0 10px 25px rgba(255, 64, 129, 0.2);
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, var(--rosa-claro) 0%, var(--rosa-medio) 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .btn-voltar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background: white;
+            color: var(--rosa-forte);
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 900;
+            font-size: 14px;
+            box-shadow: var(--shadow-doce);
+            transition: transform 0.2s;
+            border: 2px solid var(--rosa-forte);
+            z-index: 10;
+        }
+
+        .header {
+            display: flex;
+            gap: 15px;
+            background: white;
+            padding: 10px 25px;
+            border-radius: 50px;
+            box-shadow: var(--shadow-doce);
+            margin-bottom: 20px;
+            border: 4px solid white;
+            justify-content: center;
+        }
+
+        .stat { text-align: center; color: var(--rosa-forte); min-width: 60px; }
+        .stat-label { font-size: 9px; font-weight: 900; text-transform: uppercase; color: #ff80ab; }
+        .stat-value { font-size: 22px; font-weight: 900; }
+
+        .grid {
+            width: 90vw;
+            max-width: 420px;
+            height: 90vw;
+            max-height: 420px;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            background: var(--branco-transparente);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 10px;
+            gap: 5px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+            border: 6px solid white;
+        }
+
+        .candy {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: grab; font-size: clamp(24px, 7vw, 36px);
+            user-select: none;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal {
+            position: fixed; inset: 0; background: rgba(255, 64, 129, 0.6);
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100; color: white; backdrop-filter: blur(8px); text-align: center;
+        }
+        .modal.active { display: flex; }
+        .btn-modal {
+            padding: 15px 40px; font-size: 20px; background: white;
+            color: var(--rosa-forte); border: none; border-radius: 50px;
+            cursor: pointer; font-weight: 900; margin-top: 20px;
+        }
+
+
+
+
+
+        /* Animação suave para a troca de posição */
+.candy {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    font-size: clamp(24px, 7vw, 36px);
+    user-select: none;
+    
+    /* O segredo da animação está aqui: */
+    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s;
+    
+    /* Evita que o brilho do clique do celular atrapalhe */
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Efeito visual quando o doce é selecionado */
+.candy.selected {
+    transform: scale(1.2);
+    filter: brightness(1.3) drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
+    z-index: 10;
+}
+
+/* Animação de quando o doce "some" (match) */
+.candy.removing {
+    transform: scale(0);
+    opacity: 0;
+}
+
+/* Responsividade do Tabuleiro para diferentes telas */
+@media (max-width: 480px) {
+    .grid {
+        gap: 4px !important;
+        padding: 8px !important;
+        border-radius: 15px !important;
+    }
+    
+    .candy {
+        font-size: 8vw; /* Tamanho do emoji dinâmico no celular */
+    }
+}
+
+
+/* ==========================================
+   RESPONSIVIDADE PARA A TELA DE JOGO
+   ========================================== */
+
+/* Celulares Médios e Pequenos (iPhone, Android) */
+@media (max-width: 480px) {
+    body {
+        /* Garante que o conteúdo não fique "colado" no topo */
+        justify-content: flex-start;
+        padding-top: 80px; 
+    }
+
+    /* Ajuste do Botão Voltar para não atrapalhar o Header */
+    .btn-voltar {
+        top: 10px;
+        left: 10px;
+        padding: 8px 15px;
+        font-size: 12px;
+    }
+
+    /* Header mais compacto para caber todos os stats */
+    .header {
+        width: 95%;
+        padding: 8px 15px;
+        gap: 8px;
+        margin-bottom: 15px;
+        border-width: 2px;
+    }
+
+    .stat {
+        min-width: 45px;
+    }
+
+    .stat-label {
+        font-size: 8px;
+    }
+
+    .stat-value {
+        font-size: 18px;
+    }
+
+    /* Grid do jogo se ajusta ao máximo da largura disponível */
+    .grid {
+        width: 98vw;
+        height: 98vw;
+        padding: 5px;
+        gap: 3px;
+        border-width: 4px;
+        border-radius: 15px;
+    }
+
+    /* Doces um pouco menores para não apertar o tabuleiro */
+    .candy {
+        font-size: 28px;
+    }
+}
+
+/* Telas muito pequenas (Celulares antigos) */
+@media (max-width: 360px) {
+    .header {
+        gap: 5px;
+    }
+
+    .stat-value {
+        font-size: 16px;
+    }
+
+    .stat-label {
+        font-size: 7px;
+    }
+}
+
+/* Ajuste para Celular Deitado (Landscape) */
+@media (max-height: 450px) {
+    body {
+        flex-direction: row;
+        justify-content: space-evenly;
+        padding-top: 0;
+    }
+
+    .header {
+        flex-direction: column; /* Coloca os stats um embaixo do outro na lateral */
+        width: auto;
+        margin-bottom: 0;
+        margin-left: 50px; /* Abre espaço para o botão voltar */
+    }
+
+    .grid {
+        width: 70vh;
+        height: 70vh;
+    }
+
+    .btn-voltar {
+        top: 5px;
+        left: 5px;
+    }
+}
+
+/* Impede que o usuário dê zoom acidental ou arraste a página */
+html, body {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+}
+
+
+.candy {
+    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s;
+}
+.candy.removing {
+    transform: scale(0);
+    opacity: 0;
+}
+
+
+
+
+
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="btn-voltar">◀ MAPA</a>
+
+    <div class="header">
+        <div class="stat"><div class="stat-label">Nível</div><div id="current-level" class="stat-value">1</div></div>
+        <div class="stat"><div class="stat-label">Moves</div><div id="moves-left" class="stat-value">35</div></div>
+        <div class="stat">
+            <div class="stat-label">Objetivo</div>
+            <div class="stat-value"><span id="target-count">10</span> <span id="target-emoji">🍭</span></div>
+        </div>
+        <div class="stat"><div class="stat-label">Pontos</div><div id="score" class="stat-value">0</div></div>
+    </div>
+
+    <div id="grid" class="grid"></div>
+
+    <div id="modal-victory" class="modal">
+        <h2>VITÓRIA DOCE! 🍭</h2>
+        <button class="btn-modal" id="btn-next">PRÓXIMA FASE</button>
+    </div>
+
+    <script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+        const candyList = [
+            { emoji: '🍭', id: 'lollipop' },
+            { emoji: '🍬', id: 'candy' },
+            { emoji: '🍩', id: 'donut' },
+            { emoji: '🧁', id: 'cupcake' },
+            { emoji: '🍦', id: 'icecream' },
+            { emoji: '🍪', id: 'cookie' }
+        ];
+
+        class JogoDoces {
+
+
+
+swap(id1, id2) {
+        const c1 = this.candies[id1];
+        const c2 = this.candies[id2];
+
+        // Efeito visual de encolher na troca
+        c1.style.transform = "scale(0.8)";
+        c2.style.transform = "scale(0.8)";
+
+        setTimeout(() => {
+            const tempEmoji = c1.innerText;
+            const tempId = c1.dataset.id;
+
+            c1.innerText = c2.innerText;
+            c1.dataset.id = c2.dataset.id;
+
+            c2.innerText = tempEmoji;
+            c2.dataset.id = tempId;
+
+            c1.style.transform = "scale(1)";
+            c2.style.transform = "scale(1)";
+        }, 150);
+    }
+
+    touchEnd(e) {
+        if (this.draggedId === null) return;
+        this.candies[this.draggedId].classList.remove('selected');
+
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+
+        const diffX = touchEndX - this.touchStartX;
+        const diffY = touchEndY - this.touchStartY;
+
+        const sensibilidade = 30; // pixels mínimos para mover
+        let targetId = this.draggedId;
+
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+            if (Math.abs(diffX) > sensibilidade) targetId += (diffX > 0) ? 1 : -1;
+        } else {
+            if (Math.abs(diffY) > sensibilidade) targetId += (diffY > 0) ? 8 : -8;
+        }
+
+        if (targetId !== this.draggedId) this.handleMove(this.draggedId, targetId);
+        this.draggedId = null;
+    }
+
+
+
+
+
+
+            constructor() {
+                this.grid = document.getElementById('grid');
+                this.candies = [];
+                this.isProcessing = false;
+                this.score = 0;
+                this.draggedId = null;
+                
+                const params = new URLSearchParams(window.location.search);
+                this.level = parseInt(params.get('fase')) || 1;
+                
+                this.configurarDificuldade();
+                this.atualizarInterface();
+                this.init();
+            }
+
+            configurarDificuldade() {
+                const indiceDoce = (this.level - 1) % candyList.length;
+                this.target = candyList[indiceDoce];
+                // Aumenta 3 doces por nível
+                this.targetGoal = 10 + (this.level * 3);
+                // Diminui movimentos a cada 4 níveis
+                this.moves = Math.max(12, 35 - Math.floor(this.level / 4));
+            }
+
+            atualizarInterface() {
+                document.getElementById('current-level').innerText = this.level;
+                document.getElementById('moves-left').innerText = this.moves;
+                document.getElementById('target-count').innerText = this.targetGoal;
+                document.getElementById('target-emoji').innerText = this.target.emoji;
+            }
+
+            init() {
+                this.grid.innerHTML = '';
+                for (let i = 0; i < 64; i++) {
+                    const candy = document.createElement('div');
+                    candy.className = 'candy';
+                    candy.id = i;
+                    candy.draggable = true;
+                    this.setRandom(candy);
+                    
+                    candy.addEventListener('dragstart', (e) => this.dragStart(e));
+                    candy.addEventListener('drop', (e) => this.dragDrop(e));
+                    candy.addEventListener('dragover', (e) => e.preventDefault());
+                    candy.addEventListener('touchstart', (e) => this.touchStart(e), {passive: false});
+                    candy.addEventListener('touchend', (e) => this.touchEnd(e), {passive: false});
+
+                    this.grid.appendChild(candy);
+                    this.candies.push(candy);
+                }
+                this.isProcessing = true;
+                setTimeout(() => this.checkMatches(false), 500);
+            }
+
+            setRandom(el) {
+                const random = candyList[Math.floor(Math.random() * candyList.length)];
+                el.innerText = random.emoji;
+                el.dataset.id = random.id;
+            }
+
+            dragStart(e) { 
+                if(this.isProcessing) return;
+                this.draggedId = parseInt(e.target.id); 
+                e.target.classList.add('selected');
+            }
+
+            dragDrop(e) {
+                if(this.isProcessing) return;
+                const targetId = parseInt(e.target.id);
+                this.candies[this.draggedId].classList.remove('selected');
+                this.handleMove(this.draggedId, targetId);
+            }
+
+            touchStart(e) {
+                if(this.isProcessing) return;
+                this.draggedId = parseInt(e.target.id);
+                this.touchStartX = e.touches[0].clientX;
+                this.touchStartY = e.touches[0].clientY;
+                e.target.classList.add('selected');
+            }
+
+            touchEnd(e) {
+                if(this.draggedId === null) return;
+                this.candies[this.draggedId].classList.remove('selected');
+                const touchEndX = e.changedTouches[0].clientX;
+                const touchEndY = e.changedTouches[0].clientY;
+                const diffX = touchEndX - this.touchStartX;
+                const diffY = touchEndY - this.touchStartY;
+                let targetId = this.draggedId;
+                if (Math.abs(diffX) > Math.abs(diffY)) {
+                    if(Math.abs(diffX) > 30) targetId += (diffX > 0) ? 1 : -1;
+                } else {
+                    if(Math.abs(diffY) > 30) targetId += (diffY > 0) ? 8 : -8;
+                }
+                if(targetId !== this.draggedId) this.handleMove(this.draggedId, targetId);
+                this.draggedId = null;
+            }
+
+            handleMove(id1, id2) {
+                const validMoves = [id1-1, id1+1, id1-8, id1+8];
+                if ((id1 % 8 === 0 && id2 === id1 - 1) || (id1 % 8 === 7 && id2 === id1 + 1)) return;
+                if(validMoves.includes(id2) && id2 >= 0 && id2 < 64) {
+                    this.swap(id1, id2);
+                    this.moves--;
+                    document.getElementById('moves-left').innerText = this.moves;
+                    setTimeout(() => {
+                        if(!this.checkMatches(true)) {
+                            this.swap(id1, id2);
+                            this.moves++;
+                            document.getElementById('moves-left').innerText = this.moves;
+                        }
+                    }, 300);
+                }
+            }
+
+            swap(id1, id2) {
+                const c1 = this.candies[id1];
+                const c2 = this.candies[id2];
+                const tempEmoji = c1.innerText;
+                const tempId = c1.dataset.id;
+                c1.innerText = c2.innerText;
+                c1.dataset.id = c2.dataset.id;
+                c2.innerText = tempEmoji;
+                c2.dataset.id = tempId;
+            }
+
+            checkMatches(countPoints) {
+                let matched = false;
+                let toRemove = new Set();
+                for (let i = 0; i < 64; i++) {
+                    let id = this.candies[i].dataset.id;
+                    if (!id) continue;
+                    if (i % 8 < 6) {
+                        if (this.candies[i+1].dataset.id === id && this.candies[i+2].dataset.id === id) {
+                            [i, i+1, i+2].forEach(idx => toRemove.add(idx));
+                            matched = true;
+                        }
+                    }
+                    if (i < 48) {
+                        if (this.candies[i+8].dataset.id === id && this.candies[i+16].dataset.id === id) {
+                            [i, i+8, i+16].forEach(idx => toRemove.add(idx));
+                            matched = true;
+                        }
+                    }
+                }
+
+                if (matched) {
+                    toRemove.forEach(idx => {
+                        if(countPoints) {
+                            if(this.candies[idx].dataset.id === this.target.id && this.targetGoal > 0) {
+                                this.targetGoal--;
+                                document.getElementById('target-count').innerText = this.targetGoal;
+                            }
+                            this.score += 10;
+                            document.getElementById('score').innerText = this.score;
+                        }
+                        this.candies[idx].innerText = '';
+                        this.candies[idx].dataset.id = '';
+                    });
+                    this.isProcessing = true;
+                    setTimeout(() => this.preencherTabuleiro(), 250);
+                } else {
+                    this.isProcessing = false;
+                    if(this.targetGoal <= 0) this.vitoria();
+                    else this.verificarDerrota();
+                }
+                return matched;
+            }
+
+            preencherTabuleiro() {
+                let moveu = false;
+                for (let i = 55; i >= 0; i--) {
+                    if (this.candies[i + 8].dataset.id === '' && this.candies[i].dataset.id !== '') {
+                        this.swap(i, i + 8);
+                        moveu = true;
+                    }
+                }
+                for (let i = 0; i < 8; i++) {
+                    if (this.candies[i].dataset.id === '') {
+                        this.setRandom(this.candies[i]);
+                        moveu = true;
+                    }
+                }
+                if (moveu) setTimeout(() => this.preencherTabuleiro(), 100);
+                else this.checkMatches(true);
+            }
+
+            verificarDerrota() {
+                if (this.moves <= 0 && this.targetGoal > 0 && !this.isProcessing) {
+                    alert("Acabaram os movimentos!");
+                    location.reload();
+                }
+            }
+
+            vitoria() {
+                const faseLiberada = parseInt(localStorage.getItem('fase_liberada')) || 1;
+                if (this.level >= faseLiberada) {
+                    localStorage.setItem('fase_liberada', this.level + 1);
+                }
+
+                const modal = document.getElementById('modal-victory');
+                const titulo = modal.querySelector('h2');
+                const botao = document.getElementById('btn-next');
+
+                if (this.level >= 100) {
+                    titulo.innerHTML = "🏆 PARABÉNS MESTRE DOS DOCES! 🏆<br><span style='font-size:20px'>Você completou toda a jornada!</span>";
+                    botao.innerText = "VOLTAR AO MAPA";
+                    botao.onclick = () => window.location.href = 'index.html';
+                } else {
+                    titulo.innerText = "VITÓRIA DOCE! 🍭";
+                    botao.innerText = "PRÓXIMA FASE";
+                    botao.onclick = () => this.proximaFase();
+                }
+                modal.classList.add('active');
+            }
+
+            proximaFase() {
+                window.location.href = `jogo.html?fase=${this.level + 1}`;
+            }
+        }
+
+        const game = new JogoDoces();
+    </script>
+</body>
+</html>
